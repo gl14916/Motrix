@@ -22,7 +22,8 @@ const actions = {
         })
     })
   },
-  save ({ commit }, config) {
+  save ({ commit, dispatch }, config) {
+    dispatch('task/saveSession', null, { root: true })
     if (isEmpty(config)) {
       return
     }
@@ -33,8 +34,9 @@ const actions = {
   changeThemeConfig ({ commit }, theme) {
     commit('UPDATE_PREFERENCE_DATA', { theme })
   },
-  fetchBtTracker () {
-    return api.fetchBtTrackerFromGitHub()
+  fetchBtTracker ({ state }) {
+    const { trackerSource = [] } = state.config
+    return api.fetchBtTrackerFromGitHub(trackerSource)
   },
   toggleEngineMode () {
 

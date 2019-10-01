@@ -5,9 +5,11 @@ import appLocaleFr from '@shared/locales/fr'
 import appLocaleJa from '@shared/locales/ja'
 import appLocaleKo from '@shared/locales/ko'
 import appLocalePtBr from '@shared/locales/pt-BR'
+import appLocaleRu from '@shared/locales/ru-RU'
 import appLocaleTr from '@shared/locales/tr'
 import appLocaleZhCN from '@shared/locales/zh-CN'
 import appLocaleZhTW from '@shared/locales/zh-TW'
+import appLocaleUk from '@shared/locales/uk'
 
 // Please keep the locale key in alphabetical order.
 const resources = {
@@ -46,6 +48,11 @@ const resources = {
       ...appLocalePtBr
     }
   },
+  'ru': {
+    translation: {
+      ...appLocaleRu
+    }
+  },
   'tr': {
     translation: {
       ...appLocaleTr
@@ -59,6 +66,11 @@ const resources = {
   'zh-TW': {
     translation: {
       ...appLocaleZhTW
+    }
+  },
+  'uk': {
+    translation: {
+      ...appLocaleUk
     }
   }
 }

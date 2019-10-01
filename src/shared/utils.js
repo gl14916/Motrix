@@ -1,15 +1,18 @@
 import {
-  isEmpty,
-  isNaN,
+  camelCase,
   compact,
   difference,
-  parseInt,
+  isArray,
+  isEmpty,
   isFunction,
-  camelCase,
-  kebabCase
+  isNaN,
+  kebabCase,
+  omitBy,
+  parseInt,
+  pick
 } from 'lodash'
 import { resolve } from 'path'
-import { userKeys, systemKeys } from './configKeys'
+import { userKeys, systemKeys, needRestartKeys } from './configKeys'
 
 export function bytesToSize (bytes) {
   const b = parseInt(bytes, 10)
@@ -176,6 +179,11 @@ export function isMagnetTask (task) {
   return bittorrent && !bittorrent.info
 }
 
+export function checkTaskIsSeeder (task) {
+  const { bittorrent, seeder } = task
+  return !!bittorrent && seeder === 'true'
+}
+
 export function getTaskUri (task, btTracker = []) {
   const { files } = task
   let result = ''
@@ -301,6 +309,7 @@ export function separateConfig (options) {
   const system = {}
   // others
   const others = {}
+
   for (const [k, v] of Object.entries(options)) {
     if (userKeys.indexOf(k) !== -1) {
       user[k] = v
@@ -506,4 +515,77 @@ export function getFileExtension (filename) {
 
 export function removeExtensionDot (extension = '') {
   return extension.replace('.', '')
+}
+
+export function diffConfig (current = {}, next = {}) {
+  const curr = pick(current, Object.keys(next))
+  const result = omitBy(next, (val, key) => {
+    if (isArray(val)) {
+      return false
+    }
+    return curr[key] === val
+  })
+  return result
+}
+
+export function calcFormLabelWidth (locale) {
+  return locale.startsWith('de') ? '28%' : '23%'
+}
+
+export function parseHeader (header = '') {
+  header = header.trim()
+  let result = {}
+  if (!header) {
+    return result
+  }
+
+  const headers = splitTextRows(header)
+  headers.forEach((line) => {
+    const index = line.indexOf(':')
+    const name = line.substr(0, index)
+    const value = line.substr(index + 1).trim()
+    result[name] = value
+  })
+  result = changeKeysToCamelCase(result)
+
+  return result
+}
+
+export function formatOptionsForEngine (options) {
+  const result = {}
+
+  Object.keys(options).forEach((key) => {
+    result[key] = `${options[key]}`
+  })
+
+  return result
+}
+
+export function buildRpcUrl (options) {
+  const { port, secret } = options
+  let result = `127.0.0.1:${port}/jsonrpc`
+  if (secret) {
+    result = `token:${secret}@${result}`
+  }
+  result = `http://${result}`
+
+  return result
+}
+
+export function checkIsNeedRestart (changed = {}) {
+  let result = false
+
+  if (isEmpty(changed)) {
+    return result
+  }
+
+  const kebabCaseChanged = changeKeysToKebabCase(changed)
+  needRestartKeys.some((key) => {
+    if (kebabCaseChanged.hasOwnProperty(key)) {
+      result = true
+      return true
+    }
+  })
+
+  return result
 }

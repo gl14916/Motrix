@@ -197,7 +197,10 @@ export default class Application extends EventEmitter {
     if (is.dev() || is.mas()) {
       return
     }
-    this.protocolManager = new ProtocolManager()
+    const protocols = this.configManager.getUserConfig('protocols', {})
+    this.protocolManager = new ProtocolManager({
+      protocols
+    })
   }
 
   handleProtocol (url) {
@@ -257,6 +260,7 @@ export default class Application extends EventEmitter {
   handleUpdaterEvents () {
     this.updateManager.on('checking', (event) => {
       this.menuManager.updateMenuItemEnabledState('app.check-for-updates', false)
+      this.trayManager.updateMenuItemEnabledState('app.check-for-updates', false)
     })
 
     this.updateManager.on('download-progress', (event) => {
@@ -266,10 +270,12 @@ export default class Application extends EventEmitter {
 
     this.updateManager.on('update-not-available', (event) => {
       this.menuManager.updateMenuItemEnabledState('app.check-for-updates', true)
+      this.trayManager.updateMenuItemEnabledState('app.check-for-updates', true)
     })
 
     this.updateManager.on('update-downloaded', (event) => {
       this.menuManager.updateMenuItemEnabledState('app.check-for-updates', true)
+      this.trayManager.updateMenuItemEnabledState('app.check-for-updates', true)
       const win = this.windowManager.getWindow('index')
       win.setProgressBar(0)
     })
@@ -280,6 +286,7 @@ export default class Application extends EventEmitter {
 
     this.updateManager.on('update-error', (event) => {
       this.menuManager.updateMenuItemEnabledState('app.check-for-updates', true)
+      this.trayManager.updateMenuItemEnabledState('app.check-for-updates', true)
     })
   }
 
@@ -373,6 +380,14 @@ export default class Application extends EventEmitter {
       app.clearRecentDocuments()
     })
 
+    this.on('application:setup-protocols-client', (protocols) => {
+      if (is.dev() || is.mas()) {
+        return
+      }
+      console.log('this.protocolManager', protocols)
+      this.protocolManager.setup(protocols)
+    })
+
     this.on('help:official-website', () => {
       const url = 'https://motrix.app/'
       shell.openExternal(url)
@@ -401,7 +416,8 @@ export default class Application extends EventEmitter {
     })
 
     ipcMain.on('update-menu-states', (event, visibleStates, enabledStates, checkedStates) => {
-      this.menuManager.updateStates(visibleStates, enabledStates, checkedStates)
+      this.menuManager.updateMenuStates(visibleStates, enabledStates, checkedStates)
+      this.trayManager.updateMenuStates(visibleStates, enabledStates, checkedStates)
     })
 
     ipcMain.on('download-status-change', (event, status) => {

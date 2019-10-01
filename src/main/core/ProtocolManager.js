@@ -9,27 +9,43 @@ export default class ProtocolManager extends EventEmitter {
     super()
     this.options = options
 
+    // package.json:build.protocols[].schemes[]
+    // options.protocols: { 'magnet': true, 'thunder': false }
+    this.protocols = {
+      mo: true,
+      motrix: true,
+      ...options.protocols
+    }
+
     this.init()
   }
 
   init () {
-    // package.json:build.protocols[].schemes[]
-    if (!app.isDefaultProtocolClient('mo')) {
-      app.setAsDefaultProtocolClient('mo')
-    }
-    if (!app.isDefaultProtocolClient('motrix')) {
-      app.setAsDefaultProtocolClient('motrix')
-    }
-    if (!app.isDefaultProtocolClient('magnet')) {
-      app.setAsDefaultProtocolClient('magnet')
-    }
+    const { protocols } = this
+    this.setup(protocols)
+  }
+
+  setup (protocols) {
+    Object.keys(protocols).forEach((protocol) => {
+      const enabled = protocols[protocol]
+      if (enabled) {
+        if (!app.isDefaultProtocolClient(protocol)) {
+          app.setAsDefaultProtocolClient(protocol)
+        }
+      } else {
+        app.removeAsDefaultProtocolClient(protocol)
+      }
+    })
   }
 
   handle (url) {
     logger.info(`[Motrix] protocol url: ${url}`)
 
-    if (url.toLowerCase().startsWith('magnet:')) {
-      return this.handleMagnetProtocol(url)
+    if (
+      url.toLowerCase().startsWith('magnet:') ||
+      url.toLowerCase().startsWith('thunder:')
+    ) {
+      return this.handleMagnetAndThunderProtocol(url)
     }
 
     if (
@@ -40,11 +56,10 @@ export default class ProtocolManager extends EventEmitter {
     }
   }
 
-  handleMagnetProtocol (url) {
+  handleMagnetAndThunderProtocol (url) {
     if (!url) {
       return
     }
-    logger.error(`[Motrix] handleMagnetProtocol url: ${url}`)
 
     global.application.sendCommandToAll('application:new-task', 'uri', url)
   }

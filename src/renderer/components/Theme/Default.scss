@@ -5,12 +5,15 @@ body {
 }
 
 body {
-  font-family: 'Monospaced Number', 'Chinese Quote', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: "Monospaced Number", "Chinese Quote", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-variant: tabular-nums;
 }
 
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -49,7 +52,7 @@ img {
 
 .el-progress--line.is-text {
   .el-progress-bar__inner::before {
-    content: '';
+    content: "";
     opacity: 0;
     position: absolute;
     top: 0;
@@ -84,6 +87,9 @@ img {
 .el-message__content {
   line-height: 18px;
   word-break: break-all;
+  a {
+    color: $--link-color;
+  }
 }
 
 .tab-title-dialog {
@@ -131,6 +137,10 @@ img {
 .draggable {
   -webkit-app-region: drag;
   -webkit-user-select: none;
+}
+
+.non-draggable {
+  -webkit-app-region: no-drag;
 }
 
 .aside {
@@ -224,7 +234,11 @@ img {
   }
   .panel-content {
     position: relative;
-    padding: 16px 36px 52px;
+    padding: 16px 36px 64px;
     height: 100%;
   }
+}
+
+.form-actions {
+  background: $--form-actions-background;
 }

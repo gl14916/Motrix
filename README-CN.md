@@ -24,9 +24,10 @@ Motrix 是一款全能的下载工具，支持下载 HTTP、FTP、BT、磁力链
 
 建议使用安装包（Motrix-Setup-x.y.z.exe）安装 Motrix 以确保完整的体验，例如关联 torrent 文件，捕获磁力链等。
 
-如果你更喜欢便携版，你可以使用 [scoop](https://github.com/lukesampson/scoop)（需要 Windows 7+）安装最新便携版本的 Motrix。
+如果你更喜欢便携版，你可以使用 [scoop](https://github.com/lukesampson/scoop)（需要 Windows 7+，天朝用户可能需要设置 Git 代理）安装最新便携版本的 Motrix。
 
 ```bash
+scoop bucket add extras
 scoop install motrix
 ```
 
@@ -52,13 +53,17 @@ brew update && brew cask install motrix
 yay motrix
 ```
 
+Motrix 在 Linux 中首次启动可能需要使用 `sudo` 运行，因为可能没有创建下载会话文件的权限 (`/var/cache/aria2.session`)。
+
 ## ✨ 特性
 
 - 🕹 简洁明了的图形操作界面
 - 🦄 支持BT和磁力链任务
+- ☑️ 支持选择性下载BT部分文件
 - 💾 支持下载百度云盘资源
 - 🎛 最高支持 10 个任务同时下载
 - 🚀 单任务最高支持 64 线程下载
+- 🚥 设置上传/下载限速
 - 🕶 模拟用户代理UA
 - 🔔 下载完成后通知
 - 💻 支持触控栏快捷键 (Mac 专享)
@@ -131,14 +136,16 @@ npm run build
 
 | Key   | Name                | Status       |
 |-------|:--------------------|:-------------|
-| de    | German              | ✔️ [@Schloemicher](https://github.com/Schloemicher) |
+| de    | Deutsch             | ✔️ [@Schloemicher](https://github.com/Schloemicher) |
 | en-US | English             | ✔️           |
 | fa    | فارسی               | ✔️ [@Nima-Ra](https://github.com/Nima-Ra) |
 | fr    | Français            | ✔️ [@gpatarin](https://github.com/gpatarin) |
 | ja    | 日本語               | ✔️ [@hbkrkzk](https://github.com/hbkrkzk) |
 | ko    | 한국어                | ✔️ [@KOZ39](https://github.com/KOZ39) |
 | pt-BR | Portuguese (Brazil) | ✔️ [@andrenoberto](https://github.com/andrenoberto) |
+| ru    | Русский             | 🚧 [@bladeaweb](https://github.com/bladeaweb) |
 | tr    | Türkçe              | ✔️ [@abdullah](https://github.com/abdullah) |
+| uk    | Українська          | 🚧 [@bladeaweb](https://github.com/bladeaweb) |
 | zh-CN | 简体中文             | ✔️           |
 | zh-TW | 繁體中文             | ✔️ [@Yukaii](https://github.com/Yukaii) |
 

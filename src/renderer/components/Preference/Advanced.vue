@@ -11,32 +11,18 @@
         size="mini"
         :model="form"
         :rules="rules">
-        <el-form-item :label="`${$t('preferences.appearance')}: `" :label-width="formLabelWidth">
+        <el-form-item :label="`${$t('preferences.auto-update')}: `" :label-width="formLabelWidth">
           <el-col class="form-item-sub" :span="24">
-            <mo-theme-switcher
-              v-model="form.theme"
-              @change="handleThemeChange"
-            />
-          </el-col>
-          <el-col v-if="showHideAppMenuOption" class="form-item-sub" :span="16">
-            <el-checkbox v-model="form.hideAppMenu">
-              {{ $t('preferences.hide-app-menu') }}
+            <el-checkbox v-model="form.autoCheckUpdate">
+              {{ $t('preferences.auto-check-update') }}
             </el-checkbox>
-          </el-col>
-        </el-form-item>
-        <el-form-item :label="`${$t('preferences.language')}: `" :label-width="formLabelWidth">
-          <el-col class="form-item-sub" :span="16">
-            <el-select
-              v-model="form.locale"
-              @change="handleLocaleChange"
-              :placeholder="$t('preferences.change-language')">
-              <el-option
-                v-for="item in locales"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value">
-              </el-option>
-            </el-select>
+            <div class="el-form-item__info" style="margin-top: 8px;" v-if="form.lastCheckUpdateTime !== 0">
+              {{ $t('preferences.last-check-update-time') + ': ' + (form.lastCheckUpdateTime !== 0 ?  new
+              Date(form.lastCheckUpdateTime).toLocaleString() : new Date().toLocaleString()) }}
+              <span class="action-link" @click.prevent="onCheckUpdateClick">
+                {{ $t('app.check-updates-now') }}
+              </span>
+            </div>
           </el-col>
         </el-form-item>
         <el-form-item :label="`${$t('preferences.proxy')}: `" :label-width="formLabelWidth">
@@ -47,7 +33,7 @@
             >
           </el-switch>
         </el-form-item>
-        <el-form-item label="" :label-width="formLabelWidth" v-if="form.useProxy">
+        <el-form-item :label-width="formLabelWidth" v-if="form.useProxy">
           <el-col class="form-item-sub" :span="16">
             <el-input
               placeholder="[http://][USER:PASSWORD@]HOST[:PORT]"
@@ -80,7 +66,7 @@
                     width="12"
                     height="12"
                     :spin="true"
-                    v-if="isSyncTracker"
+                    v-if="trackerSyncing"
                   />
                   <mo-icon name="sync" width="12" height="12" v-else />
                 </el-button>
@@ -95,7 +81,26 @@
             </a>
           </div>
         </el-form-item>
-        <el-form-item :label="`${$t('preferences.developer')}: `" :label-width="formLabelWidth">
+        <el-form-item :label="`${$t('preferences.download-protocol')}: `" :label-width="formLabelWidth">
+          {{ $t('preferences.protocols-default-client') }}
+          <el-col class="form-item-sub" :span="24">
+            <el-switch
+              v-model="form.protocols.magnet"
+              :active-text="$t('preferences.protocols-magnet')"
+              @change="(val) => onProtocolsChange('magnet', val)"
+              >
+            </el-switch>
+          </el-col>
+          <el-col class="form-item-sub" :span="24">
+            <el-switch
+              v-model="form.protocols.thunder"
+              :active-text="$t('preferences.protocols-thunder')"
+              @change="(val) => onProtocolsChange('thunder', val)"
+              >
+            </el-switch>
+          </el-col>
+        </el-form-item>
+        <el-form-item :label="`${$t('preferences.security')}: `" :label-width="formLabelWidth">
           <el-col class="form-item-sub" :span="24">
             {{ $t('preferences.mock-user-agent') }}
             <el-input
@@ -111,6 +116,27 @@
               <el-button @click="() => changeUA('du')">du</el-button>
             </el-button-group>
           </el-col>
+          <el-col class="form-item-sub" :span="18">
+            {{ $t('preferences.rpc-secret') }}
+            <el-input
+              :show-password="hideRpcSecret"
+              placeholder="RPC Secret"
+              :maxlength="24"
+              v-model="form.rpcSecret"
+            >
+              <i slot="append" @click.prevent="onDiceClick">
+                <mo-icon name="dice" width="12" height="12" />
+              </i>
+            </el-input>
+            <div class="el-form-item__info" style="margin-top: 8px;">
+              <a target="_blank" href="https://github.com/agalwood/Motrix/wiki/RPC" rel="noopener noreferrer">
+                {{ $t('preferences.rpc-secret-tips') }}
+                <mo-icon name="link" width="12" height="12" />
+              </a>
+            </div>
+          </el-col>
+        </el-form-item>
+        <el-form-item :label="`${$t('preferences.developer')}: `" :label-width="formLabelWidth">
           <el-col class="form-item-sub" :span="24">
             {{ $t('preferences.app-log-path') }}
             <el-input placeholder="" disabled v-model="logPath">
@@ -149,15 +175,20 @@
 <script>
   import is from 'electron-is'
   import { mapState } from 'vuex'
-  import ThemeSwitcher from '@/components/Preference/ThemeSwitcher'
+  import { cloneDeep } from 'lodash'
+  import randomize from 'randomatic'
+  import * as clipboard from 'clipboard-polyfill'
   import ShowInFolder from '@/components/Native/ShowInFolder'
   import userAgentMap from '@shared/ua'
-  import { availableLanguages, getLanguage } from '@shared/locales'
-  import { getLocaleManager } from '@/components/Locale'
   import {
+    buildRpcUrl,
+    calcFormLabelWidth,
+    checkIsNeedRestart,
     convertCommaToLine,
-    convertLineToComma
+    convertLineToComma,
+    diffConfig
   } from '@shared/utils'
+  import '@/components/Icons/dice'
   import '@/components/Icons/sync'
   import '@/components/Icons/refresh'
 
@@ -165,20 +196,28 @@
     const {
       allProxy,
       allProxyBackup,
+      autoCheckUpdate,
       btTracker,
       hideAppMenu,
-      locale,
-      theme,
+      lastCheckUpdateTime,
+      protocols,
+      rpcListenPort,
+      rpcSecret,
       useProxy,
       userAgent
     } = config
     const result = {
       allProxy,
       allProxyBackup,
+      autoCheckUpdate,
       btTracker: convertCommaToLine(btTracker),
       hideAppMenu,
-      locale,
-      theme,
+      lastCheckUpdateTime,
+      protocols: {
+        ...protocols
+      },
+      rpcListenPort,
+      rpcSecret,
       useProxy,
       userAgent
     }
@@ -188,25 +227,25 @@
   export default {
     name: 'mo-preference-advanced',
     components: {
-      [ThemeSwitcher.name]: ThemeSwitcher,
       [ShowInFolder.name]: ShowInFolder
     },
-    data: function () {
+    data () {
+      const { locale } = this.$store.state.preference.config
+      const form = initialForm(this.$store.state.preference.config)
+      const formOriginal = cloneDeep(form)
+
       return {
-        formLabelWidth: '23%',
-        form: initialForm(this.$store.state.preference.config),
-        isSyncTracker: false,
+        form,
+        formLabelWidth: calcFormLabelWidth(locale),
+        formOriginal,
+        hideRpcSecret: true,
         rules: {},
-        color: '#c00',
-        locales: availableLanguages
+        trackerSyncing: false
       }
     },
     computed: {
-      title: function () {
+      title () {
         return this.$t('preferences.advanced')
-      },
-      showHideAppMenuOption: function () {
-        return is.windows() || is.linux()
       },
       ...mapState('preference', {
         config: state => state.config,
@@ -215,28 +254,42 @@
       })
     },
     watch: {
+      'form.rpcSecret' (val) {
+        const url = buildRpcUrl({
+          port: this.form.rpcListenPort,
+          secret: val
+        })
+        clipboard.writeText(url)
+      }
     },
     methods: {
       isRenderer: is.renderer,
-      handleLocaleChange (locale) {
-        const lng = getLanguage(locale)
-        getLocaleManager().changeLanguage(lng)
-        this.$electron.ipcRenderer.send('command', 'application:change-locale', lng)
-      },
-      handleThemeChange (theme) {
-        this.form.theme = theme
-        this.$electron.ipcRenderer.send('command', 'application:change-theme', theme)
+      onCheckUpdateClick () {
+        this.$electron.ipcRenderer.send('command', 'application:check-for-updates')
+        this.$msg.info(this.$t('app.checking-for-updates'))
+        this.$store.dispatch('preference/fetchPreference')
+          .then((config) => {
+            const { lastCheckUpdateTime } = config
+            this.form.lastCheckUpdateTime = lastCheckUpdateTime
+          })
       },
       syncTrackerFromGitHub () {
-        this.isSyncTracker = true
+        this.trackerSyncing = true
         this.$store.dispatch('preference/fetchBtTracker')
           .then((data) => {
             console.log('syncTrackerFromGitHub data====>', data)
             this.form.btTracker = data
           })
           .finally(() => {
-            this.isSyncTracker = false
+            this.trackerSyncing = false
           })
+      },
+      onProtocolsChange (protocol, enabled) {
+        const { protocols } = this.form
+        this.form.protocols = {
+          ...protocols,
+          [protocol]: enabled
+        }
       },
       onUseProxyChange (flag) {
         this.form.allProxy = flag ? this.form.allProxyBackup : ''
@@ -251,6 +304,15 @@
         }
         this.form.userAgent = ua
       },
+      onDiceClick () {
+        this.hideRpcSecret = false
+        const rpcSecret = randomize('Aa0', 12)
+        this.form.rpcSecret = rpcSecret
+
+        setTimeout(() => {
+          this.hideRpcSecret = true
+        }, 2000)
+      },
       onFactoryResetClick () {
         this.$electron.remote.dialog.showMessageBox({
           type: 'warning',
@@ -264,26 +326,50 @@
           }
         })
       },
+      syncFormConfig () {
+        this.$store.dispatch('preference/fetchPreference')
+          .then((config) => {
+            this.form = initialForm(config)
+            this.formOriginal = cloneDeep(this.form)
+          })
+      },
       submitForm (formName) {
         this.$refs[formName].validate((valid) => {
           if (!valid) {
             console.log('error submit!!')
             return false
           }
+          const changed = diffConfig(this.formOriginal, this.form)
           const data = {
-            ...this.form,
-            btTracker: convertLineToComma(this.form.btTracker)
+            ...changed,
+            btTracker: convertLineToComma(this.form.btTracker),
+            protocols: {
+              ...this.form.protocols
+            }
           }
+          console.log('changed====》', data)
 
-          console.log('this.form===>', data)
           this.$store.dispatch('preference/save', data)
+            .then(() => {
+              this.$store.dispatch('app/fetchEngineOptions')
+              this.syncFormConfig()
+              this.$msg.success(this.$t('preferences.save-success-message'))
+            })
+            .catch(() => {
+              this.$msg.success(this.$t('preferences.save-fail-message'))
+            })
+
           if (this.isRenderer()) {
-            this.$electron.ipcRenderer.send('command', 'application:relaunch')
+            this.$electron.ipcRenderer.send('command', 'application:setup-protocols-client', data.protocols)
+
+            if (checkIsNeedRestart(changed)) {
+              this.$electron.ipcRenderer.send('command', 'application:relaunch')
+            }
           }
         })
       },
       resetForm (formName) {
-        this.form = initialForm(this.$store.state.preference.config)
+        this.syncFormConfig()
       }
     }
   }

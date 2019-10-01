@@ -10,6 +10,7 @@ const userKeys = [
   'log-path',
   'new-task-show-downloading',
   'open-at-login',
+  'protocols',
   'resume-all-when-app-launched',
   'session-path',
   'task-notification',
@@ -95,6 +96,8 @@ const systemKeys = [
   'max-resume-failure-tries',
   'max-tries',
   'max-upload-limit',
+  'max-overall-download-limit',
+  'max-overall-upload-limit',
   'metalink-base-uri',
   'metalink-enable-unique-protocol',
   'metalink-language',
@@ -131,7 +134,12 @@ const systemKeys = [
   'user-agent'
 ]
 
+const needRestartKeys = [
+  'hide-app-menu'
+]
+
 export {
   userKeys,
-  systemKeys
+  systemKeys,
+  needRestartKeys
 }
